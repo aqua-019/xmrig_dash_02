@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import { T, Icon, fmt, GlobalCSS } from "./tokens.jsx";
 import {
   useNanopool, usePrices, useNetwork, usePoolStats,
-  useUnits, UnitProvider, useMobile, useReveal,
+  useUnits, UnitProvider, useMobile,
   POOL_ADAPTERS, ADDR,
 } from "./hooks.jsx";
 import {
   Card, StatCard, SectionHead, MiniBar, ZoomPills, UnitToggle,
   LiveDot, DataRow, CopyButton, RefreshRing, DataPending,
-  StaggerGrid, HashChart, PriceChart, SparkLine,
+  StaggerGrid, HashChart, PriceChart,
 } from "./components.jsx";
 import MoneroScene from "./MoneroScene.jsx";
 
@@ -127,6 +127,30 @@ function TabOverview({ np, prices, net, mobile }) {
             sub={fmt.xmr((e.month?.coins || 0) * 12) + " XMR/year"} color={T.blue} glow={T.blue} />
         </StaggerGrid>
       )}
+
+      {/* Featured Pool Banner */}
+      <Card glow={T.xmr} pad="16px 20px" className="outline-reveal" style={{ border: `1px solid ${T.xmr}22`, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -30, right: -30, width: 140, height: 140, borderRadius: "50%", background: T.xmr, opacity: 0.04, filter: "blur(40px)", pointerEvents: "none" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+          <Icon name="star" size={12} color={T.xmr} />
+          <span style={{ fontFamily: T.mono, fontSize: 8, letterSpacing: 2, color: T.xmr }}>FEATURED POOL</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div>
+            <div style={{ fontFamily: T.serif, fontSize: 16, fontStyle: "italic", color: T.t1 }}>PrivacyGateway.io Mining Pool</div>
+            <div style={{ fontFamily: T.mono, fontSize: 11, color: T.t3, marginTop: 3 }}>Not for profit, but for privacy. Every hash makes Monero stronger.</div>
+            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.t4, marginTop: 6 }}>pool.xmr.privacygateway.io / Ports 3333, 5555, 7777, 9000</div>
+          </div>
+          <div className="btn-sweep press-compress" style={{
+            padding: "8px 18px", borderRadius: T.r.sm, border: `1px solid ${T.xmr}`,
+            background: T.xmrd, color: T.xmr, fontFamily: T.mono, fontSize: 11,
+            cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+            transition: "all 0.15s",
+          }}>
+            View pool <Icon name="ext" size={10} />
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
@@ -386,6 +410,26 @@ function TabWorkers({ np, mobile }) {
           sub="Cumulative accepted" color={T.gold} glow={T.gold} />
       </StaggerGrid>
 
+      {/* Stale/offline worker alerts */}
+      {workers.some(w => w.hashrate === 0) && (
+        <div style={{
+          padding: "12px 16px", borderRadius: `0 ${T.r.md}px ${T.r.md}px 0`,
+          borderLeft: `3px solid ${T.gold}`, background: T.goldd,
+          display: "flex", alignItems: "flex-start", gap: 10,
+          animation: "fadeSlideUp 0.4s ease forwards",
+        }}>
+          <Icon name="alert" size={14} color={T.gold} style={{ marginTop: 1, flexShrink: 0 }} />
+          <div>
+            <div style={{ fontFamily: T.mono, fontSize: 11, color: T.gold }}>
+              {workers.filter(w => w.hashrate === 0).map(w => `"${w.id}"`).join(", ")} {workers.filter(w => w.hashrate === 0).length === 1 ? "has" : "have"} 0 hashrate -- may need attention
+            </div>
+            <div style={{ fontFamily: T.mono, fontSize: 9, color: T.t4, marginTop: 3 }}>
+              Workers with no shares in 30+ minutes trigger this alert
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Worker cards */}
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(2,1fr)", gap: 10 }}>
         {workers.map(w => {
@@ -479,6 +523,91 @@ function TabWorkers({ np, mobile }) {
   );
 }
 
+/* ══════════════ POOL DISTRIBUTION BARS ═══════════════ */
+
+const POOL_DIST = [
+  { name: "P2Pool (all)",     pct: 38.2, color: T.grn,  featured: false, decentralized: true },
+  { name: "MoneroOcean",      pct: 14.1, color: T.blue, featured: false },
+  { name: "Nanopool",         pct: 12.3, color: T.xmr,  featured: false, yours: true },
+  { name: "HashVault",        pct: 8.4,  color: T.gold, featured: false },
+  { name: "SupportXMR",       pct: 6.1,  color: T.t3,   featured: false },
+  { name: "PrivacyGateway",   pct: 0.8,  color: T.xmr,  featured: true },
+  { name: "Others / Unknown", pct: 20.1, color: T.t5,   featured: false },
+];
+
+function PoolDistribution({ userHr, netHr, poolStats }) {
+  return (
+    <div>
+      {POOL_DIST.map(p => (
+        <div key={p.name} style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+          borderBottom: `1px solid ${T.s3}`,
+          ...(p.featured ? { background: T.xmrdd, borderLeft: `2px solid ${T.xmr}`, paddingLeft: 10, borderRadius: 0, marginLeft: -2 } : {}),
+        }}>
+          <span style={{
+            fontFamily: T.mono, fontSize: 10, width: 120, flexShrink: 0,
+            color: p.featured ? T.xmr : p.yours ? T.xmr : T.t2,
+            display: "flex", alignItems: "center", gap: 4,
+          }}>
+            {p.featured && <Icon name="star" size={10} color={T.xmr} />}
+            {p.name}
+          </span>
+          <div style={{ flex: 1, height: 8, borderRadius: 4, background: T.s3, overflow: "hidden" }}>
+            <div style={{
+              height: "100%", borderRadius: 4, background: p.color,
+              width: `${p.pct}%`, transition: "width 0.8s ease",
+              opacity: p.featured || p.yours ? 1 : 0.7,
+            }} />
+          </div>
+          <span style={{
+            fontFamily: T.mono, fontSize: 10, width: 48, textAlign: "right", flexShrink: 0,
+            color: p.featured ? T.xmr : p.yours ? T.xmr : T.t3,
+          }}>{p.pct}%</span>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 14, marginTop: 10, fontFamily: T.mono, fontSize: 9, color: T.t4, flexWrap: "wrap" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: T.grn, display: "inline-block" }} />
+          Decentralized (P2Pool)
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: T.xmr, display: "inline-block" }} />
+          Your pools
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: T.t5, display: "inline-block" }} />
+          Other
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════ MOUSE-FOLLOW GLOW (200 doc #45) ═════ */
+
+function MouseGlow() {
+  const ref = useRef(null);
+  const pos = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handler = (e) => {
+      pos.current = { x: e.clientX, y: e.clientY };
+      if (ref.current) {
+        ref.current.style.background = `radial-gradient(600px circle at ${e.clientX}px ${e.clientY}px, rgba(255,102,0,0.03), transparent 60%)`;
+      }
+    };
+    window.addEventListener("mousemove", handler);
+    return () => window.removeEventListener("mousemove", handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{
+      position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
+      transition: "background 0.3s ease",
+    }} />
+  );
+}
+
 /* ══════════════ TAB: NETWORK ═════════════════════════ */
 
 function TabNetwork({ np, net, prices, mobile }) {
@@ -490,7 +619,7 @@ function TabNetwork({ np, net, prices, mobile }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* 3D Scene */}
-      <Card glow={T.xmr} pad="0" tilt={false} style={{ overflow: "hidden" }}>
+      <Card glow={T.xmr} pad="0" tilt={false} style={{ overflow: "hidden", animation: "floatAmbient 6s ease-in-out infinite" }}>
         <MoneroScene height={300} hashrate={net?.hashrate || 0} difficulty={net?.difficulty || 0} />
       </Card>
 
@@ -512,6 +641,30 @@ function TabNetwork({ np, net, prices, mobile }) {
           sub={`at ${h(userHr)}`} color={T.t1} icon="target" />
         <StatCard label="Annual inflation" value="~0.85%" sub="Decreasing" sub2="Post-tail emission" color={T.blue} />
       </StaggerGrid>
+
+      {/* Pool hashrate distribution */}
+      <Card glow={T.xmr} pad="20px 22px">
+        <SectionHead label="Pool hashrate distribution" sub="Known Monero mining pools by estimated network share" />
+        <PoolDistribution userHr={userHr} netHr={net?.hashrate} poolStats={null} />
+      </Card>
+
+      {/* Mining calculator */}
+      <Card pad="20px 22px" glow={T.gold}>
+        <SectionHead serif label="Your mining footprint" sub="Fleet contribution to network security" />
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(3,1fr)", gap: 8 }}>
+          {[
+            ["YOUR FLEET HASHRATE", h(userHr), `${(np.data?.workers||[]).length} worker${(np.data?.workers||[]).length!==1?"s":""}`, T.xmr],
+            ["NETWORK SHARE", net?.hashrate ? (userHr/net.hashrate*100).toFixed(5)+"%" : "\u2014", `of ${net?fmt.hash(net.hashrate):"\u2014"} global`, T.t1],
+            ["EST. POWER DRAW", `~${Math.max(5,Math.round(userHr/233))}W`, `${Math.round(userHr/Math.max(1,Math.round(userHr/233)))} H/W efficiency`, T.t2],
+          ].map(([l,v,s,c])=>(
+            <div key={l} style={{ background:T.s2, borderRadius:T.r.md, padding:"12px 14px" }}>
+              <div style={{ fontFamily:T.mono, fontSize:8, color:T.t4, letterSpacing:1.5, marginBottom:4 }}>{l}</div>
+              <div style={{ fontFamily:T.display, fontSize:16, fontWeight:600, color:c }}>{v}</div>
+              <div style={{ fontFamily:T.mono, fontSize:9, color:T.t4, marginTop:3 }}>{s}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 10 }}>
         <Card pad="20px 22px" glow={T.blue}>
@@ -597,6 +750,9 @@ function AppShell() {
         }} />
       </div>
 
+      {/* Mouse-follow glow (200 doc complexity 3: cursor spotlight) */}
+      <MouseGlow />
+
       {/* Navigation */}
       <div style={{
         position: "sticky", top: 0, zIndex: 50,
@@ -611,6 +767,7 @@ function AppShell() {
               width: 32, height: 32, borderRadius: 9, background: T.xmr,
               display: "flex", alignItems: "center", justifyContent: "center",
               boxShadow: `0 4px 14px ${T.xmr}44`,
+              animation: "shadowPulse 4s ease-in-out infinite",
             }}>
               <Icon name="pick" size={16} color="#fff" />
             </div>
@@ -663,7 +820,7 @@ function AppShell() {
           <RefreshRing intervalMs={T.refresh.nanopool} />
 
           {/* Manual refresh */}
-          <button onClick={np.reload} style={{
+          <button onClick={np.reload} className="btn-sweep press-compress" style={{
             fontFamily: T.mono, fontSize: 10, padding: "5px 13px", borderRadius: T.r.sm,
             border: `1px solid ${T.s4}`, background: "transparent", color: T.t4,
             cursor: "pointer", flexShrink: 0, transition: "all 0.15s",
@@ -678,7 +835,7 @@ function AppShell() {
         {/* Tab bar */}
         <div style={{ padding: `0 ${PAD}px`, display: "flex", gap: 0, overflowX: "auto" }}>
           {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
+            <button key={t.id} onClick={() => setTab(t.id)} className="press-compress" style={{
               padding: mobile ? "9px 12px" : "9px 18px",
               border: "none", borderRadius: 0, cursor: "pointer",
               fontFamily: T.mono, fontSize: mobile ? 10 : 11, letterSpacing: 0.5,
@@ -714,11 +871,13 @@ function AppShell() {
 
       {/* Main content */}
       <main style={{ position: "relative", zIndex: 1, padding: `22px ${PAD}px ${PAD}px`, maxWidth: 1380, margin: "0 auto" }}>
-        {tab === "overview" && <TabOverview np={np} prices={prices} net={net} mobile={mobile} />}
-        {tab === "pools" && <TabPools np={np} poolStats={poolStats} mobile={mobile} />}
-        {tab === "earnings" && <TabEarnings np={np} prices={prices} mobile={mobile} />}
-        {tab === "workers" && <TabWorkers np={np} mobile={mobile} />}
-        {tab === "network" && <TabNetwork np={np} net={net} prices={prices} mobile={mobile} />}
+        <div key={tab} className="tab-content">
+          {tab === "overview" && <TabOverview np={np} prices={prices} net={net} mobile={mobile} />}
+          {tab === "pools" && <TabPools np={np} poolStats={poolStats} mobile={mobile} />}
+          {tab === "earnings" && <TabEarnings np={np} prices={prices} mobile={mobile} />}
+          {tab === "workers" && <TabWorkers np={np} mobile={mobile} />}
+          {tab === "network" && <TabNetwork np={np} net={net} prices={prices} mobile={mobile} />}
+        </div>
       </main>
 
       {/* Footer */}

@@ -189,4 +189,116 @@ export const GlobalCSS = `
     animation: shimmer 1.8s ease-in-out infinite;
     border-radius: ${T.r.md}px;
   }
+
+  /* 200 Doc — Motion #24: Section stagger reveal (complexity 3) */
+  @keyframes sectionReveal {
+    from { opacity: 0; transform: translateY(24px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* 200 Doc — Motion #13: Floating hero ambient (complexity 2) */
+  @keyframes floatAmbient {
+    0%, 100% { transform: translateY(0px); }
+    50%      { transform: translateY(-6px); }
+  }
+
+  /* 200 Doc — Motion #20: Shadow pulse (complexity 2) */
+  @keyframes shadowPulse {
+    0%, 100% { box-shadow: 0 4px 20px rgba(255,102,0,0.08); }
+    50%      { box-shadow: 0 8px 32px rgba(255,102,0,0.16); }
+  }
+
+  /* 200 Doc — Motion #25: Border draw animation (complexity 2) */
+  @keyframes borderDraw {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
+  }
+
+  /* 200 Doc — Motion #35: Glassmorphism animation (complexity 4) */
+  @keyframes glassShift {
+    0%, 100% { backdrop-filter: blur(16px) saturate(120%); }
+    50%      { backdrop-filter: blur(20px) saturate(140%); }
+  }
+
+  /* 200 Doc — Interaction #57: Tab content crossfade (complexity 3) */
+  .tab-content {
+    animation: tabCrossfade 0.3s ease;
+  }
+  @keyframes tabCrossfade {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 200 Doc — Interaction #21: Button fill sweep (complexity 2) */
+  .btn-sweep {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .btn-sweep::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: ${T.xmrd};
+    transition: left 0.35s ease;
+    z-index: -1;
+  }
+  .btn-sweep:hover::before {
+    left: 0;
+  }
+
+  /* 200 Doc — Interaction #26: Press compression (complexity 2) */
+  .press-compress:active {
+    transform: scale(0.97);
+    transition: transform 0.08s ease;
+  }
+
+  /* 200 Doc — Interaction #14: Card outline reveal (complexity 1) */
+  .outline-reveal {
+    position: relative;
+  }
+  .outline-reveal::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    border: 1px solid ${T.xmr};
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+  .outline-reveal:hover::after {
+    opacity: 0.25;
+  }
+
+  /* 200 Doc — Interaction #33: Skeleton loading shimmer (complexity 2) — enhanced */
+  @keyframes skeletonPulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 0.8; }
+  }
+  .skeleton-line {
+    height: 10px;
+    border-radius: 4px;
+    background: ${T.s3};
+    animation: skeletonPulse 1.5s ease-in-out infinite;
+  }
+
+  /* 200 Doc — Typography #29: Kinetic typography (complexity 4) */
+  @keyframes numberTick {
+    0%   { transform: translateY(0); opacity: 1; }
+    50%  { transform: translateY(-4px); opacity: 0.7; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  .number-update {
+    animation: numberTick 0.3s ease;
+  }
+
+  /* Reduced motion: respect user preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 `;
