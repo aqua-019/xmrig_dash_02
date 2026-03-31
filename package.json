@@ -1,6 +1,6 @@
 {
-  "name": "xmrminer-v2",
-  "version": "2.0.0",
+  "name": "xmrminer-v3",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "vite",

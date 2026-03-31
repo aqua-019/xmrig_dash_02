@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
-   XMRminer V2 — Design Tokens
+   XMRminer V3 — Design Tokens
    Indigofera-anchored dark palette · Level 3-5 typography
    Background: perceptible dark navy, NOT pitch black
+   V3: Bolder weights, brighter text, more visible glass
 ═══════════════════════════════════════════════════════════════ */
 
 export const T = {
@@ -27,17 +28,17 @@ export const T = {
   blue:  "#4A9EFF",  blued: "rgba(74,158,255,0.10)",
   cyan:  "#00CED1",
 
-  // Text — offset for perceptible background
-  t1: "#F0F0F5",   // primary — bright, high contrast on #0E0F18
-  t2: "#C8C8D8",   // secondary — muted but readable
-  t3: "#9898AC",   // tertiary — labels, hints (bumped from #848494 for AA)
-  t4: "#5E5E72",   // quaternary — disabled, decorative
-  t5: "#3A3A4E",   // ghost — grid lines, deep borders
+  // Text — V3: BOLDER, MORE VISIBLE
+  t1: "#FFFFFF",   // primary — pure white
+  t2: "#E4E4F2",   // secondary — bright, strong body text
+  t3: "#C0C0D6",   // tertiary — labels, clearly readable (bumped)
+  t4: "#9090AA",   // quaternary — metadata, still legible (bumped)
+  t5: "#606078",   // ghost — borders, grid lines (bumped)
 
-  // Glass
+  // Glass — V3: slightly more visible borders
   glass:   "rgba(20,21,32,0.78)",
-  glassB:  "rgba(255,255,255,0.05)",
-  glassBH: "rgba(255,255,255,0.10)",
+  glassB:  "rgba(255,255,255,0.07)",
+  glassBH: "rgba(255,255,255,0.12)",
 
   // Typography — Level 3-5 complexity
   // Geologica: variable weight 100-900, display headers
@@ -218,6 +219,12 @@ export const GlobalCSS = `
   @keyframes glassShift {
     0%, 100% { backdrop-filter: blur(16px) saturate(120%); }
     50%      { backdrop-filter: blur(20px) saturate(140%); }
+  }
+
+  /* V3: Slide-up for mobile bottom sheets */
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
   }
 
   /* 200 Doc — Interaction #57: Tab content crossfade (complexity 3) */
