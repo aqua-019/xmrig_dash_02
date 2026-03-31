@@ -74,7 +74,8 @@ export default function MoneroScene({ height = 320, hashrate = 0, difficulty = 0
     }
 
     // Miner nodes (particles)
-    const NODE_COUNT = 80;
+    const isMobile = navigator.maxTouchPoints > 0;
+    const NODE_COUNT = isMobile ? 40 : 80;
     const nodePositions = new Float32Array(NODE_COUNT * 3);
     const nodeSpeeds = [];
     const nodeRadii = [];
@@ -119,7 +120,7 @@ export default function MoneroScene({ height = 320, hashrate = 0, difficulty = 0
     scene.add(connections);
 
     // Background dust particles
-    const dustCount = 200;
+    const dustCount = isMobile ? 80 : 200;
     const dustPos = new Float32Array(dustCount * 3);
     for (let i = 0; i < dustCount; i++) {
       dustPos[i * 3] = (Math.random() - 0.5) * 300;
