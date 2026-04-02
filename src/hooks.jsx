@@ -374,21 +374,70 @@ export function usePrices() {
   return p;
 }
 
-/* ── Network Hook (LIVE) ─────────────────────────────── */
+/* ── Network Hook (LIVE — multi-source fallback) ─────── */
 
 export function useNetwork() {
   const [net, setNet] = useState(null);
   useEffect(() => {
     const load = async () => {
+      // Source 1: xmrchain.net REST API
       try {
         const r = await fetch("https://xmrchain.net/api/networkinfo").then(r => r.json());
-        setNet({
-          height:     r.data?.height || 0,
-          difficulty:  r.data?.difficulty || 0,
-          hashrate:    r.data?.hash_rate || 0,
-          reward:      (r.data?.base_reward || 0) / 1e12,
-          fee:         (r.data?.fee_per_kb || 0) / 1e9,
-        });
+        if (r.data) {
+          setNet({
+            height:     r.data.height || 0,
+            difficulty:  r.data.difficulty || 0,
+            hashrate:    r.data.hash_rate || 0,
+            reward:      (r.data.base_reward || 0) / 1e12,
+            fee:         (r.data.fee_per_kb || 0) / 1e9,
+          });
+          return;
+        }
+      } catch (_) {}
+
+      // Source 2: Monero RPC nodes (try multiple, some may be CORS-blocked)
+      const rpcNodes = [
+        "https://node.monerodevs.org:18089",
+        "https://nodes.hashvault.pro:18081",
+        "https://node.community.rino.io:18081",
+        "http://node.monerodevs.org:18089",
+        "http://xmr-node.cakewallet.com:18081",
+      ];
+      for (const node of rpcNodes) {
+        try {
+          const r = await fetch(`${node}/json_rpc`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: "0", method: "get_info" }),
+            signal: AbortSignal.timeout(5000),
+          }).then(r => r.json());
+          const i = r.result;
+          if (i) {
+            setNet({
+              height:     i.height || 0,
+              difficulty:  i.difficulty || 0,
+              hashrate:    i.difficulty ? Math.round(i.difficulty / 120) : 0,
+              reward:      0.6, // approximate tail emission
+              fee:         0,
+            });
+            return;
+          }
+        } catch (_) { continue; }
+      }
+
+      // Source 3: PrivacyGateway network endpoint
+      try {
+        const r = await fetch("https://api.pool.xmr.privacygateway.io/network/stats").then(r => r.json());
+        if (r) {
+          setNet({
+            height:     r.height || 0,
+            difficulty:  r.difficulty || 0,
+            hashrate:    r.hash || (r.difficulty ? Math.round(r.difficulty / 120) : 0),
+            reward:      (r.reward || 0) / 1e12 || 0.6,
+            fee:         0,
+          });
+          return;
+        }
       } catch (_) {}
     };
     load();
@@ -398,55 +447,55 @@ export function useNetwork() {
   return net;
 }
 
-/* ── Monero RPC Hook (enhanced network data) ─────────── */
+/* ── Monero RPC Hook (enhanced network data — mempool, blocks) ── */
 
 export function useMoneroRPC() {
   const [data, setData] = useState(null);
   useEffect(() => {
     const load = async () => {
-      // Try multiple RPC nodes, fall back gracefully
       const nodes = [
         "https://node.monerodevs.org:18089",
-        "https://xmr-node.cakewallet.com:18081",
+        "https://nodes.hashvault.pro:18081",
+        "https://node.community.rino.io:18081",
+        "http://node.monerodevs.org:18089",
+        "http://xmr-node.cakewallet.com:18081",
       ];
       for (const node of nodes) {
         try {
+          const rpcCall = (method) => fetch(`${node}/json_rpc`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: "0", method }),
+            signal: AbortSignal.timeout(5000),
+          }).then(r => r.json());
+
           const [info, blockHeader] = await Promise.all([
-            fetch(`${node}/json_rpc`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jsonrpc: "2.0", id: "0", method: "get_info" }),
-            }).then(r => r.json()),
-            fetch(`${node}/json_rpc`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jsonrpc: "2.0", id: "0", method: "get_last_block_header" }),
-            }).then(r => r.json()),
+            rpcCall("get_info"),
+            rpcCall("get_last_block_header"),
           ]);
           const i = info.result || {};
           const bh = blockHeader.result?.block_header || {};
-          setData({
-            height: i.height || 0,
-            txPoolSize: i.tx_pool_size || 0,
-            incomingConnections: i.incoming_connections_count || 0,
-            outgoingConnections: i.outgoing_connections_count || 0,
-            databaseSize: i.database_size || 0,
-            blockWeightLimit: i.block_weight_limit || 0,
-            lastBlock: {
-              height: bh.height || 0,
-              reward: bh.reward || 0,
-              numTxes: bh.num_txes || 0,
-              difficulty: bh.difficulty || 0,
-              hash: bh.hash || "",
-              timestamp: bh.timestamp || 0,
-            },
-          });
-          return; // success, stop trying nodes
-        } catch (_) {
-          continue;
-        }
+          if (i.height) {
+            setData({
+              height: i.height || 0,
+              txPoolSize: i.tx_pool_size || 0,
+              incomingConnections: i.incoming_connections_count || 0,
+              outgoingConnections: i.outgoing_connections_count || 0,
+              databaseSize: i.database_size || 0,
+              blockWeightLimit: i.block_weight_limit || 0,
+              lastBlock: {
+                height: bh.height || 0,
+                reward: bh.reward || 0,
+                numTxes: bh.num_txes || 0,
+                difficulty: bh.difficulty || 0,
+                hash: bh.hash || "",
+                timestamp: bh.timestamp || 0,
+              },
+            });
+            return;
+          }
+        } catch (_) { continue; }
       }
-      // All nodes failed, keep null
     };
     load();
     const id = setInterval(load, 60000);

@@ -11,10 +11,13 @@ import { useUnits, useReveal, useMobile } from "./hooks.jsx";
 
 /* ── Glass Card (perspective tilt on hover + touch) ──── */
 
+// Detect touch device once at module level (no per-component hooks)
+const IS_TOUCH = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+const IS_NARROW = typeof window !== "undefined" && window.innerWidth < 480;
+
 export function Card({ children, glow = T.xmr, pad = "16px 18px", style = {}, onClick, tilt = true, className = "" }) {
   const ref = useRef(null);
   const [st, setSt] = useState({ rx: 0, ry: 0, hover: false });
-  const mobile = useMobile(480);
 
   const onMove = useCallback((e) => {
     if (!tilt || !ref.current) return;
@@ -47,9 +50,9 @@ export function Card({ children, glow = T.xmr, pad = "16px 18px", style = {}, on
       onClick={onClick}
       className={className}
       style={{
-        background: mobile ? T.s1 : T.glass,
-        backdropFilter: mobile ? "none" : "blur(16px)",
-        WebkitBackdropFilter: mobile ? "none" : "blur(16px)",
+        background: IS_NARROW ? T.s1 : T.glass,
+        backdropFilter: IS_NARROW ? "none" : "blur(16px)",
+        WebkitBackdropFilter: IS_NARROW ? "none" : "blur(16px)",
         border: `1px solid ${st.hover ? glow + "33" : T.glassB}`,
         borderRadius: T.r.lg,
         padding: pad,

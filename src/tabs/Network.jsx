@@ -2,7 +2,7 @@ import { T, Icon, fmt } from "../tokens.jsx";
 import { useUnits, POOL_ADAPTERS } from "../hooks.jsx";
 import {
   Card, StatCard, SectionHead, DataRow, DataPending,
-  StaggerGrid, PriceChart,
+  StaggerGrid, PriceChart, LiveDot,
 } from "../components.jsx";
 import MoneroScene from "../MoneroScene.jsx";
 
@@ -78,6 +78,18 @@ export default function TabNetwork({ np, net, prices, rpcData, mobile }) {
       <Card glow={T.xmr} pad="0" tilt={false} style={{ overflow: "hidden", animation: "floatAmbient 6s ease-in-out infinite" }}>
         <MoneroScene height={300} hashrate={net?.hashrate || 0} difficulty={net?.difficulty || 0} />
       </Card>
+
+      {/* Data source indicator */}
+      {!net && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
+          borderRadius: T.r.md, background: T.s2, border: `1px solid ${T.s3}`,
+          fontFamily: T.mono, fontSize: 10, color: T.t4,
+        }}>
+          <LiveDot on={false} size={6} />
+          Fetching network data from xmrchain.net / Monero RPC nodes...
+        </div>
+      )}
 
       <StaggerGrid cols={3} mobile={mobile}>
         <StatCard label="Network hashrate" value={net ? fmt.hash(net.hashrate) : "\u2014"}
